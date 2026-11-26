@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check src tests pipelines scripts
+      - run: uv run ruff format --check src tests pipelines scripts
+      - run: uv run pytest
+
+  container:
+    name: Build + smoke-test API image
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --no-default-groups --group serve
+      - name: Create dummy model bundle (real models are not stored in git)
+        run: uv run python scripts/make_dummy_bundle.py
+      - name: Build image
+        run: docker build -f docker/api.Dockerfile -t taxi-demand-api:${{ github.sha }} .
+      - name: Smoke test
+        run: |
+          docker run -d --name api -p 8000:8000 taxi-demand-api:${{ github.sha }}
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 1; done
+          curl -sf localhost:8000/health
+          curl -sf -X POST localhost:8000/predict -H 'Content-Type: application/json' \
+               -d '{"zone_ids": [132, 161]}' | tee resp.json
+          grep -q predicted_pickups resp.json
+      - name: Container logs (on failure)
+        if: failure()
+        run: docker logs api

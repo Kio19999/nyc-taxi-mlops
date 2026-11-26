@@ -1,0 +1,13 @@
+.git
+.venv
+data
+mlflow.db
+mlartifacts
+mlruns
+notebooks
+tests
+infra
+**/__pycache__
+.env
+models/*
+!models/champion

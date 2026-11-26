@@ -1,0 +1,45 @@
+# Local stand-in for the AWS stack: Postgres = RDS, MinIO = S3, MLflow = tracking server.
+services:
+  postgres:
+    image: postgres:16
+    env_file: .env
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    env_file: .env
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+
+  create-bucket:
+    image: minio/mc:latest
+    depends_on: [minio]
+    env_file: .env
+    entrypoint: >
+      /bin/sh -c "sleep 5 &&
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb -p local/mlflow-artifacts"
+
+  mlflow:
+    build: {context: ., dockerfile: docker/mlflow.Dockerfile}
+    depends_on:
+      postgres: {condition: service_healthy}
+    env_file: .env
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    ports: ["5001:5000"]
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      --artifacts-destination s3://mlflow-artifacts
+
+volumes:
+  pgdata:
+  miniodata:

@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/
+.ruff_cache/
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
+mlruns/
+mlartifacts/
+.DS_Store
+*.part
+models/
+mlflow.db
+data/predictions/

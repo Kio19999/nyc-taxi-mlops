@@ -1,0 +1,53 @@
+# Single source of truth for paths and parameters. No hardcoded values in code.
+data:
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  zone_lookup_url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  dataset: "yellow_tripdata"
+  start_month: "2023-01"
+  end_month: "2024-12"
+  raw_dir: "data/raw"
+  interim_dir: "data/interim"
+  processed_dir: "data/processed"
+
+validation:
+  max_drop_rate: 0.10        # fail the pipeline if >10% of trips are filtered out
+  max_trip_hours: 6
+  max_trip_miles: 200
+  max_fare: 1000
+  n_zones: 265               # valid TLC zones are 1..263; 264/265 = unknown, excluded
+
+features:
+  lags: [1, 2, 3, 24, 168]          # hours back (168 = same hour last week)
+  rolling_windows: [24, 168]
+  target: "pickups"
+
+training:
+  experiment_name: "taxi-demand"
+  # Time-based split: never shuffle time series.
+  train_end: "2024-07-01"      # train  : 2023-01-08 .. 2024-06-30
+  valid_end: "2024-10-01"      # valid  : 2024-07 .. 2024-09 (early stopping)
+                               # test   : 2024-10 .. 2024-12 (final, untouched)
+  categorical: ["zone_id"]
+  features: ["zone_id", "hour_of_day", "day_of_week", "month", "is_weekend", "is_holiday",
+             "lag_1", "lag_2", "lag_3", "lag_24", "lag_168", "roll_mean_24", "roll_mean_168"]
+  lgbm_params:
+    objective: "poisson"       # counts >= 0 with variance growing with the mean
+    learning_rate: 0.05
+    num_leaves: 127
+    min_data_in_leaf: 100
+    feature_fraction: 0.9
+    bagging_fraction: 0.8
+    bagging_freq: 1
+    verbose: -1
+  num_boost_round: 2000
+  early_stopping_rounds: 50
+  model_dir: "models"
+
+registry:
+  model_name: "taxi-demand-lgbm"
+  # challenger must beat champion's WAPE on the same test window by >= 1% (relative)
+  min_relative_improvement: 0.01
+
+serving:
+  model_dir: "models/champion"     # exported champion: model.txt + metadata.json + history.parquet
+  history_hours: 192               # last 8 days of zone-hour data needed to compute lags
