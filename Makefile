@@ -1,4 +1,4 @@
-.PHONY: flow flow-serve prefect-ui setup lint format test data features train export serve batch docker-build docker-run pipeline up down mlflow-ui
+.PHONY: notebooks flow flow-serve prefect-ui setup lint format test data features train export serve batch docker-build docker-run pipeline up down mlflow-ui
 
 setup:            ## install deps + git hooks
 	uv sync
@@ -48,6 +48,9 @@ flow-serve:       ## schedule it monthly (keep this terminal open); view runs in
 
 prefect-ui:       ## Prefect dashboard at http://localhost:4200
 	PREFECT_SERVER_ANALYTICS_ENABLED=false uv run prefect server start
+
+notebooks:        ## open the analysis notebooks in JupyterLab
+	uv run jupyter lab notebooks/
 
 pipeline: data features train export
 

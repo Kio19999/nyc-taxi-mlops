@@ -44,5 +44,9 @@ make docker-build && make docker-run
 
 LightGBM reduces WAPE by **43.6%** vs. the strongest baseline.
 
+## Notebooks
+- [`01_eda.ipynb`](notebooks/01_eda.ipynb): data quality, seasonality, zone concentration, autocorrelation (why lags 1h/24h/168h), year-over-year drift
+- [`02_model_evaluation.ipynb`](notebooks/02_model_evaluation.ipynb): champion vs. baselines, error by hour and zone size, feature importance, bias
+
 ## Data
 NYC TLC Trip Record Data (yellow taxi), aggregated to zone × hour pickup counts.
