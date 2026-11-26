@@ -1,5 +1,7 @@
 # NYC Taxi Demand Forecasting — MLOps Platform
 
+[![CI](https://github.com/Kio19999/nyc-taxi-mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/Kio19999/nyc-taxi-mlops/actions/workflows/ci.yml)
+
 Forecasts hourly taxi pickups for each of NYC's 263 taxi zones so a fleet can reposition
 drivers ahead of demand. Built as a production-style ML system: versioned data, validated
 pipelines, experiment tracking, gated model promotion, containerized serving, CI/CD,
